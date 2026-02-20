@@ -30,9 +30,80 @@ No Python. No Node. No 500MB container. Just one Go binary and a config file.
 
 Picobot runs happily on a **$5/mo VPS**, a Raspberry Pi, or even an old Android phone via Termux.
 
-## Quick Start — 30 seconds
+## Quick Start — Installazione locale con Docker
 
-### Docker Run
+Guida passo passo per chi parte da zero: dal download del progetto fino al bot Telegram attivo.
+
+### Prerequisiti
+
+- **Docker Desktop** installato e avviato → https://www.docker.com/products/docker-desktop/
+- **Git** (opzionale, serve per il clone) → https://git-scm.com
+- Un **Telegram Bot Token** → crealo con [@BotFather](https://t.me/botfather) su Telegram
+- Una **API Key** di [OpenRouter](https://openrouter.ai) (o altro endpoint compatibile OpenAI)
+
+### 1. Scarica il progetto
+
+**Opzione A — Clone con Git (consigliata)**
+
+```sh
+git clone https://github.com/monaripietro/picobot-pit.git
+cd picobot-pit
+```
+
+**Opzione B — Download ZIP (senza Git)**
+
+1. Vai su https://github.com/monaripietro/picobot-pit
+2. Clicca **Code → Download ZIP**
+3. Estrai lo ZIP
+4. Apri il Terminale nella cartella estratta (quella che contiene `go.mod` e la cartella `docker/`)
+
+### 2. Verifica di essere nella cartella corretta
+
+```sh
+ls
+```
+
+Devi vedere questi file:
+
+```
+cmd/   docker/   go.mod   go.sum   README.md   ...
+```
+
+Se non li vedi, naviga nella cartella giusta con `cd nome-cartella`.
+
+### 3. Build dell'immagine Docker
+
+Questo comando costruisce l'immagine in locale. Richiede 1–2 minuti la prima volta (scarica Go e compila il bot).
+
+```sh
+docker build -t picobot-pit:latest -f docker/Dockerfile .
+```
+
+> **Attenzione**: il `.` finale è obbligatorio. Il comando va lanciato dalla **root del progetto** (dove c'è `go.mod`), non dalla cartella `docker/`.
+
+Al termine vedrai:
+
+```
+Successfully tagged picobot-pit:latest
+```
+
+Verifica che l'immagine esista:
+
+```sh
+docker images | grep picobot-pit
+```
+
+### 4. Crea la cartella dati
+
+Questa cartella salva la configurazione del bot sul tuo computer, così non viene persa se il container viene ricreato.
+
+```sh
+mkdir -p picobot-data
+```
+
+### 5. Avvia il bot
+
+Sostituisci `your-key` e `your-telegram-token` con i tuoi valori reali:
 
 ```sh
 docker run -d --name picobot-pit \
@@ -40,38 +111,62 @@ docker run -d --name picobot-pit \
   -e OPENAI_API_BASE="https://openrouter.ai/api/v1" \
   -e PICOBOT_MODEL="openrouter/free" \
   -e TELEGRAM_BOT_TOKEN="your-telegram-token" \
-  -v ./picobot-data:/home/picobot/.picobot \
+  -v ./picobot-/home/picobot/.picobot \
   --restart unless-stopped \
-  monaripietro/picobot-pit:latest
+  picobot-pit:latest
 ```
 
-All config, memory, and skills are persisted in `./picobot-data` on your host.
-
-### Docker Compose
-
-Create a `docker-compose.yml`:
-
-```yaml
-services:
-  picobot:
-    image: monaripietro/picobot-pit:latest
-    container_name: picobot-pit
-    restart: unless-stopped
-    environment:
-      - OPENAI_API_KEY=your-key
-      - OPENAI_API_BASE=https://openrouter.ai/api/v1
-      - PICOBOT_MODEL=openrouter/free
-      - TELEGRAM_BOT_TOKEN=your-telegram-token
-      - TELEGRAM_ALLOW_FROM=your-user-id
-    volumes:
-      - ./picobot-data:/home/picobot/.picobot
-```
-
-Then run:
+Verifica che stia girando:
 
 ```sh
-docker compose up -d
+docker ps
 ```
+
+Vedi i log in tempo reale:
+
+```sh
+docker logs -f picobot-pit
+```
+
+Se il gateway è partito correttamente vedrai qualcosa come:
+
+```
+heartbeat: started
+gateway: listening...
+```
+
+### 6. Gestione del container
+
+| Azione | Comando |
+|--------|---------|
+| Ferma il bot | `docker stop picobot-pit` |
+| Riavvia il bot | `docker start picobot-pit` |
+| Elimina container | `docker rm -f picobot-pit` |
+| Elimina immagine | `docker rmi picobot-pit:latest` |
+
+> Se modifichi il codice, devi rifare la **build** (step 3) e ricreare il container (step 5).
+
+### Troubleshooting
+
+**"repository does not exist" al momento del `docker run`**  
+Docker non trova l'immagine in locale e tenta di scaricarla da Docker Hub. Rifai la build (step 3) e verifica con `docker images | grep picobot-pit`.
+
+**Errore durante la build: "COPY go.mod not found" o "entrypoint.sh not found"**  
+Stai eseguendo il comando dalla cartella sbagliata. Torna alla root del progetto e riprova:
+
+```sh
+cd ~/Documents/GitHub/picobot-pit
+docker build -t picobot-pit:latest -f docker/Dockerfile .
+```
+
+**Il container si avvia ma il bot non risponde su Telegram**  
+Controlla i log:
+
+```sh
+docker logs picobot-pit
+```
+
+Verifica che `TELEGRAM_BOT_TOKEN` e `OPENAI_API_KEY` siano corretti e senza spazi extra.
 
 ### From Source
 
@@ -207,7 +302,6 @@ GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o picobot ./cmd/picobot
 
 # Old x86 VPS
 GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o picobot ./cmd/picobot
-
 ```
 
 Works on any Linux with 256MB RAM. No runtime dependencies. Just copy the binary and run.
