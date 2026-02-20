@@ -16,6 +16,31 @@ cd picobot-main
 go build -o picobot ./cmd/picobot
 ```
 
+Se su Android non funziona la build per la versione di go installata
+```bash
+go: go.mod requires go >= 1.26 (running go 1.25.4; GOTOOLCHAIN=local)
+```
+
+applicare la seguente modifica nella cartella del progetto:
+```bash
+# Env
+export GOTOOLCHAIN=local
+export GO111MODULE=on
+
+# Fix go.mod (oppure aprire il file con nano e modifcare la versione di go 1.21+)
+sed -i '/^go 1.26/d' go.mod
+echo 'go 1.25' >> go.mod
+
+# Build
+go clean -modcache
+go mod tidy
+go build ./cmd/picobot
+
+# Test
+./picobot -h
+```
+ 
+
 ## Step 2: Onboard
 
 Run the onboard command to create the config and workspace:
