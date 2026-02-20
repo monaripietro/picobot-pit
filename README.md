@@ -35,14 +35,14 @@ Picobot runs happily on a **$5/mo VPS**, a Raspberry Pi, or even an old Android 
 ### Docker Run
 
 ```sh
-docker run -d --name picobot \
+docker run -d --name picobot-pit \
   -e OPENAI_API_KEY="your-key" \
   -e OPENAI_API_BASE="https://openrouter.ai/api/v1" \
-  -e PICOBOT_MODEL="google/gemini-2.5-flash" \
+  -e PICOBOT_MODEL="openrouter/free" \
   -e TELEGRAM_BOT_TOKEN="your-telegram-token" \
   -v ./picobot-data:/home/picobot/.picobot \
   --restart unless-stopped \
-  louisho5/picobot:latest
+  monaripietro/picobot-pit:latest
 ```
 
 All config, memory, and skills are persisted in `./picobot-data` on your host.
@@ -54,13 +54,13 @@ Create a `docker-compose.yml`:
 ```yaml
 services:
   picobot:
-    image: louisho5/picobot:latest
-    container_name: picobot
+    image: monaripietro/picobot-pit:latest
+    container_name: picobot-pit
     restart: unless-stopped
     environment:
       - OPENAI_API_KEY=your-key
       - OPENAI_API_BASE=https://openrouter.ai/api/v1
-      - PICOBOT_MODEL=google/gemini-2.5-flash
+      - PICOBOT_MODEL=openrouter/free
       - TELEGRAM_BOT_TOKEN=your-telegram-token
       - TELEGRAM_ALLOW_FROM=your-user-id
     volumes:
@@ -158,7 +158,7 @@ Picobot uses a single JSON config at `~/.picobot/config.json`:
 {
   "agents": {
     "defaults": {
-      "model": "google/gemini-2.5-flash",
+      "model": "openrouter/free",
       "maxTokens": 8192,
       "temperature": 0.7,
       "maxToolIterations": 200
@@ -202,11 +202,12 @@ picobot memory rank -q "query"         # semantic memory search
 Picobot was designed for constrained environments:
 
 ```sh
-# Raspberry Pi / ARM device
+# Raspberry Pi / ARM device (Android)
 GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o picobot ./cmd/picobot
 
 # Old x86 VPS
 GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o picobot ./cmd/picobot
+
 ```
 
 Works on any Linux with 256MB RAM. No runtime dependencies. Just copy the binary and run.
